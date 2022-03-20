@@ -46,8 +46,8 @@ const hexToArrayBuffer = (hexString) => new Uint8Array(hexString.match(/[\da-f]{
 const getBalance = async wallet => {    
     let balance = await wallet.getBalance()
     var decoded_balance = CBOR.decode(hexToArrayBuffer(balance))
-    Array.isArray(decoded_balance) ? 
-    CBOR.decode(hexToArrayBuffer(balance))[0] :
-    CBOR.decode(hexToArrayBuffer(balance))
+    decoded_balance = Array.isArray(decoded_balance) ? 
+    decoded_balance[0] :
+    decoded_balance
     return decoded_balance / 1000000
 }
