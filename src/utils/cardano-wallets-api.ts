@@ -76,9 +76,9 @@ const ERROR = {
     TX_TOO_BIG: 'Transaction too big',
     NO_COMATIBLE_WALLET: 'No compatible wallet found'
 }
-interface compatible {nami: string, ccvault: string}
+interface compatible {nami: string, ccvault: string, eternl: string}
 
-const WALLETS_COMPATIBLE = ['nami','ccvault']
+const WALLETS_COMPATIBLE = ['nami','ccvault', 'eternl']
 
 export const findWallet = async (walletName:String, WalletObject:any) : Promise<any>=> {
     const found_wallet = WALLETS_COMPATIBLE.find(w => w == walletName && WalletObject.hasOwnProperty(walletName))
