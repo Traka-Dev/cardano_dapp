@@ -1,74 +1,6 @@
 import { MultiAsset, TransactionOutputs, TransactionUnspentOutput } from '@emurgo/cardano-serialization-lib-asmjs'
 import { Buffer } from 'buffer'
 
-declare const window:any
-
-type Endpoints = {
-    isEnabled : () => Promise<boolean>,
-    enable : () => Promise<void>,
-    getAddress : () => Promise<string>,
-    getAddressHex : () => Promise<string>,
-    getRewardAddress : () => Promise<string>,
-    getRewardAddressHex : () => Promise<string>,
-    getNetworkId : () => Promise<{
-        id: number,
-        network: string
-    }>,
-    getUtxos: () => Promise<Utxo[]>,
-    getAssets: () => Promise<Asset[]>,
-    getUtxosHex: () => Promise<string[]>,
-    send: (data: Send) => Promise<string>,
-    sendMultiple: (data: SendMultiple) => Promise<string>,
-    delegate: (data: Delegate) => Promise<string>,
-    getBalanceADA: () => Promise<Number>,
-    auxiliary: Auxiliary
-}
-
-type Delegate = {
-    poolId: string,
-    metadata?: any,
-    metadataLabel?: string
-}
-
-type Utxo = {
-    txHash: string,
-    txId: number,
-    amount: Asset[]
-}
-
-type Asset = {
-    unit: string,
-    quantity: string
-}
-
-
-type Send = {
-    address: string, 
-    amount?: number, 
-    assets?: Asset[],
-    metadata?: any,
-    metadataLabel?: string
-}
-
-type SendMultiple = {
-    recipients: {
-        address: string, 
-        amount?: number, 
-        assets?: Asset[]
-    }[],
-    metadata?: any,
-    metadataLabel?: string
-}
-
-type Auxiliary = {
-    Buffer: object,
-    AsciiToBuffer: (string : string) => Buffer,
-    HexToBuffer: (string : string) => Buffer,
-    AsciiToHex: (string : string) => string,
-    HexToAscii: (string : string) => string,
-    BufferToAscii: (buffer : Buffer) => string,
-    BufferToHex: (buffer : Buffer) => string,
-}
 
 
 const ERROR = {
@@ -76,41 +8,44 @@ const ERROR = {
     TX_TOO_BIG: 'Transaction too big',
     NO_COMATIBLE_WALLET: 'No compatible wallet found'
 }
-interface compatible {nami: string, ccvault: string, eternl: string}
 
-const WALLETS_COMPATIBLE = ['nami','ccvault', 'eternl']
+const WALLETS_COMPATIBLE = ['nami', 'ccvault', 'eternl']
 
-export const findWallet = async (walletName:String, WalletObject:any) : Promise<any>=> {
+export const findWallet = async (walletName, WalletObject) => {
     const found_wallet = WALLETS_COMPATIBLE.find(w => w == walletName && WalletObject.hasOwnProperty(walletName))
-    if(!found_wallet || found_wallet === undefined || found_wallet === '' || found_wallet === null){
-        throw(ERROR.NO_COMATIBLE_WALLET) 
+    if (!found_wallet || found_wallet === undefined || found_wallet === '' || found_wallet === null) {
+        throw (ERROR.NO_COMATIBLE_WALLET)
     }
-    const Wallet = WalletObject[walletName as keyof compatible]
+    const Wallet = WalletObject[walletName]
     // Enable Wallet to get the obj
-    return await Wallet.enable()    
+    return await Wallet.enable()
 }
 
-export default async function CardanoWalletsApi(WalletObject: any, blockfrostApiKey: string, serializationLib?: any) : Promise<Endpoints> {
-    
-    const CSL = serializationLib || await import('@emurgo/cardano-serialization-lib-asmjs')    
+export default async function CardanoWalletsApi(WalletObject, blockfrostApiKey, serializationLib = null) {
+
+    const CSL = serializationLib || await import('@emurgo/cardano-serialization-lib-asmjs')
     const Buffer = (await import('buffer')).Buffer
     const Wallet = WalletObject
-    const fetch = (await import('node-fetch')).default || window.fetch    
+    const fetch = (await import('node-fetch')).default || window.fetch
     const CoinSelection = (await import('./coinSelection')).default
 
-    async function isEnabled() : Promise<boolean>{
-        return await Wallet.isEnabled()  
+    async function isEnabled() {
+        return await Wallet.isEnabled()
     }
 
-    async function enable() : Promise<void>{        
+    async function experimental() {
+        return await Wallet.experimental
+    }
+
+    async function enable() {
         try {
             await Wallet.enable()
         } catch (error) {
             throw error
-        }        
+        }
     }
 
-    async function getAddress() : Promise<string>{
+    async function getAddress() {
         return CSL.Address.from_bytes(
             Buffer.from(
                 await getAddressHex(),
@@ -119,11 +54,11 @@ export default async function CardanoWalletsApi(WalletObject: any, blockfrostApi
         ).to_bech32()
     }
 
-    async function getAddressHex() : Promise<string>{        
+    async function getAddressHex() {
         return await Wallet.getChangeAddress()
     }
-    
-    async function getRewardAddress() : Promise<string>{
+
+    async function getRewardAddress() {
         return CSL.RewardAddress.from_address(
             CSL.Address.from_bytes(
                 Buffer.from(
@@ -134,12 +69,12 @@ export default async function CardanoWalletsApi(WalletObject: any, blockfrostApi
         )?.to_address().to_bech32()
     }
 
-    async function getRewardAddressHex() : Promise<string> {        
-        let RewardAddressHex = await Wallet.getRewardAddresses()               
+    async function getRewardAddressHex() {
+        let RewardAddressHex = await Wallet.getRewardAddresses()
         return RewardAddressHex[0]
     }
 
-    async function getNetworkId() : Promise<{id: number, network: string}>{
+    async function getNetworkId() {
         let networkId = await Wallet.getNetworkId()
         return {
             id: networkId,
@@ -147,23 +82,23 @@ export default async function CardanoWalletsApi(WalletObject: any, blockfrostApi
         }
     }
 
-    async function getUtxos() : Promise<Utxo[]> {
+    async function getUtxos() {
         let Utxos = (await getUtxosHex()).map(u => CSL.TransactionUnspentOutput.from_bytes(
-                Buffer.from(
-                    u, 
-                    'hex'
-                )
+            Buffer.from(
+                u,
+                'hex'
             )
         )
+        )
         let UTXOS = []
-        for(let utxo of Utxos){
+        for (let utxo of Utxos) {
             let assets = _utxoToAssets(utxo)
 
             UTXOS.push({
                 txHash: Buffer.from(
                     utxo.input().transaction_id().to_bytes(),
                     'hex'
-                  ).toString('hex'),
+                ).toString('hex'),
                 txId: utxo.input().index(),
                 amount: assets
             })
@@ -171,39 +106,39 @@ export default async function CardanoWalletsApi(WalletObject: any, blockfrostApi
         return UTXOS
     }
 
-    async function getBalanceADA(): Promise<Number>{
+    async function getBalanceADA() {
         let balance = 0
         let Utxos = await getUtxos()
         Utxos.forEach(e => {
-            balance += Number(e.amount.find(e => e.unit === 'lovelace')?.quantity) /1000000
+            balance += Number(e.amount.find(e => e.unit === 'lovelace')?.quantity) / 1000000
         })
         return balance
     }
 
-    async function getAssets() : Promise<Asset[]> {
+    async function getAssets() {
         let Utxos = await getUtxos()
-        let AssetsRaw : Asset[] = []
+        let AssetsRaw = []
         Utxos.forEach(u => {
             AssetsRaw.push(...u.amount.filter(a => a.unit != 'lovelace'))
         })
-        let AssetsMap : any = {}
-        
-        for(let k of AssetsRaw){
+        let AssetsMap = {}
+
+        for (let k of AssetsRaw) {
             let quantity = parseInt(k.quantity)
-            if(!AssetsMap[k.unit]) AssetsMap[k.unit] = 0
+            if (!AssetsMap[k.unit]) AssetsMap[k.unit] = 0
             AssetsMap[k.unit] += quantity
         }
-        return Object.keys(AssetsMap).map(k => ({unit: k, quantity: AssetsMap[k].toString()}))
+        return Object.keys(AssetsMap).map(k => ({ unit: k, quantity: AssetsMap[k].toString() }))
     }
 
-    
 
-    async function getUtxosHex() : Promise<string[]> {
+
+    async function getUtxosHex() {
         return await Wallet.getUtxos()
     }
 
-    
-    async function send({address, amount = 0, assets = [], metadata = null, metadataLabel = '721'} : Send) : Promise<string> {
+
+    async function send({ address, amount = 0, assets = [], metadata = null, metadataLabel = '721' }) {
         let PaymentAddress = await getAddress()
 
         let protocolParameter = await _getProtocolParameter()
@@ -217,7 +152,7 @@ export default async function CardanoWalletsApi(WalletObject: any, blockfrostApi
         let lovelace = Math.floor(amount * 1000000).toString()
 
         let ReceiveAddress = address
-        
+
 
         let multiAsset = _makeMultiAsset(assets)
 
@@ -225,13 +160,13 @@ export default async function CardanoWalletsApi(WalletObject: any, blockfrostApi
             CSL.BigNum.from_str(lovelace)
         )
 
-        if(assets.length > 0)outputValue.set_multiasset(multiAsset)
+        if (assets.length > 0) outputValue.set_multiasset(multiAsset)
 
         let minAda = CSL.min_ada_required(
-            outputValue, 
+            outputValue,
             CSL.BigNum.from_str(protocolParameter.minUtxo || "1000000")
         )
-        if(CSL.BigNum.from_str(lovelace).compare(minAda) < 0)outputValue.set_coin(minAda)
+        if (CSL.BigNum.from_str(lovelace).compare(minAda) < 0) outputValue.set_coin(minAda)
 
 
         let outputs = CSL.TransactionOutputs.new()
@@ -241,7 +176,7 @@ export default async function CardanoWalletsApi(WalletObject: any, blockfrostApi
                 outputValue
             )
         )
-        
+
         let RawTransaction = _txBuilder({
             PaymentAddress: PaymentAddress,
             Utxos: utxos,
@@ -254,8 +189,8 @@ export default async function CardanoWalletsApi(WalletObject: any, blockfrostApi
 
         return await _signSubmitTx(RawTransaction)
     }
-    
-    async function sendMultiple({recipients = [], metadata = null, metadataLabel = '721'}: SendMultiple) : Promise<string> {
+
+    async function sendMultiple({ recipients = [], metadata = null, metadataLabel = '721' }) {
         let PaymentAddress = await getAddress()
 
         let protocolParameter = await _getProtocolParameter()
@@ -268,7 +203,7 @@ export default async function CardanoWalletsApi(WalletObject: any, blockfrostApi
 
         let outputs = CSL.TransactionOutputs.new()
 
-        for (let recipient of recipients){
+        for (let recipient of recipients) {
             let lovelace = Math.floor((recipient.amount || 0) * 1000000).toString()
             let ReceiveAddress = recipient.address
             let multiAsset = _makeMultiAsset(recipient.assets || [])
@@ -276,16 +211,16 @@ export default async function CardanoWalletsApi(WalletObject: any, blockfrostApi
             let outputValue = CSL.Value.new(
                 CSL.BigNum.from_str(lovelace)
             )
-            
-            if((recipient.assets || []).length > 0) outputValue.set_multiasset(multiAsset)
+
+            if ((recipient.assets || []).length > 0) outputValue.set_multiasset(multiAsset)
 
             let minAda = CSL.min_ada_required(
-                outputValue, 
+                outputValue,
                 CSL.BigNum.from_str(protocolParameter.minUtxo || "1000000")
             )
-            if(CSL.BigNum.from_str(lovelace).compare(minAda) < 0)outputValue.set_coin(minAda)
-    
-            
+            if (CSL.BigNum.from_str(lovelace).compare(minAda) < 0) outputValue.set_coin(minAda)
+
+
             outputs.add(
                 CSL.TransactionOutput.new(
                     CSL.Address.from_bech32(ReceiveAddress),
@@ -307,9 +242,9 @@ export default async function CardanoWalletsApi(WalletObject: any, blockfrostApi
         return await _signSubmitTx(RawTransaction)
     }
 
-    async function delegate({poolId, metadata = null, metadataLabel = '721'} : Delegate) : Promise<string>{
+    async function delegate({ poolId, metadata = null, metadataLabel = '721' }) {
         let protocolParameter = await _getProtocolParameter()
-        
+
         let stakeKeyHash = CSL.RewardAddress.from_address(
             CSL.Address.from_bytes(
                 Buffer.from(
@@ -321,53 +256,56 @@ export default async function CardanoWalletsApi(WalletObject: any, blockfrostApi
 
         let delegation = await getDelegation(await getRewardAddress())
 
-        async function getDelegation(rewardAddr: string) : Promise<any>{
-            let stake = await _blockfrostRequest(`/accounts/${rewardAddr}`) 
-            if(!stake || stake.error || !stake.pool_id) return {}
-
+        async function getDelegation(rewardAddr) {
+            let stake = await _blockfrostRequest(`/accounts/${rewardAddr}`)
+            if (!stake || stake.error || !stake.pool_id) return {}
             return {
                 active: stake.active,
                 rewards: stake.withdrawable_amount,
                 poolId: stake.pool_id,
             }
         }
+        //check if you already delegated to the same pool
+        if (delegation.poolId !== poolId) {
+            let pool = await _blockfrostRequest(`/pools/${poolId}`)
+            let poolHex = pool.hex
 
-        let pool = await _blockfrostRequest(`/pools/${poolId}`)
-        let poolHex = pool.hex
+            let utxos = (await getUtxosHex()).map(u => CSL.TransactionUnspentOutput.from_bytes(Buffer.from(u, 'hex')))
+            let PaymentAddress = await getAddress()
 
-        let utxos = (await getUtxosHex()).map(u => CSL.TransactionUnspentOutput.from_bytes(Buffer.from(u, 'hex')))
-        let PaymentAddress = await getAddress()
-
-        let outputs = CSL.TransactionOutputs.new()
-        outputs.add(
-            CSL.TransactionOutput.new(
-              CSL.Address.from_bech32(PaymentAddress),
-              CSL.Value.new(
-                  CSL.BigNum.from_str(protocolParameter.keyDeposit)
-              )
+            let outputs = CSL.TransactionOutputs.new()
+            outputs.add(
+                CSL.TransactionOutput.new(
+                    CSL.Address.from_bech32(PaymentAddress),
+                    CSL.Value.new(
+                        CSL.BigNum.from_str(protocolParameter.keyDeposit)
+                    )
+                )
             )
-        )
 
-        let transaction = _txBuilder({
-            PaymentAddress,
-            Utxos: utxos,
-            ProtocolParameter: protocolParameter,
-            Outputs: outputs,
-            Delegation: {
-                poolHex: poolHex,
-                stakeKeyHash: stakeKeyHash,
-                delegation: delegation
-            },
-            Metadata: metadata,
-            MetadataLabel: metadataLabel
-        })
+            let transaction = _txBuilder({
+                PaymentAddress,
+                Utxos: utxos,
+                ProtocolParameter: protocolParameter,
+                Outputs: outputs,
+                Delegation: {
+                    poolHex: poolHex,
+                    stakeKeyHash: stakeKeyHash,
+                    delegation: delegation
+                },
+                Metadata: metadata,
+                MetadataLabel: metadataLabel
+            })
 
-        let txHash = await _signSubmitTx(transaction)
+            let txHash = await _signSubmitTx(transaction)
 
-        return txHash
+            return txHash
+        } else {
+            return 'You already delegated to this pool!'
+        }
     }
 
-    async function signData(string : string) : Promise<string> {
+    async function signData(string) {
         let address = await getAddressHex()
         let coseSign1Hex = await Wallet.signData(
             address,
@@ -382,118 +320,102 @@ export default async function CardanoWalletsApi(WalletObject: any, blockfrostApi
     //////////////////////////////////////////////////
     //Auxiliary
 
-    function AsciiToBuffer(string : string) : Buffer{
+    function AsciiToBuffer(string) {
         return Buffer.from(string, "ascii")
     }
 
-    function HexToBuffer(string: string) : Buffer{
+    function HexToBuffer(string) {
         return Buffer.from(string, "hex")
     }
 
-    function AsciiToHex(string: string) : string{
+    function AsciiToHex(string) {
         return AsciiToBuffer(string).toString('hex')
     }
 
-    function HexToAscii(string: string) : string{
+    function HexToAscii(string) {
         return HexToBuffer(string).toString("ascii")
     }
 
-    function BufferToAscii(buffer: Buffer) : string{
+    function BufferToAscii(buffer) {
         return buffer.toString('ascii')
     }
 
-    function BufferToHex(buffer: Buffer) : string{
+    function BufferToHex(buffer) {
         return buffer.toString("hex")
     }
 
-    
+
 
     //////////////////////////////////////////////////
 
-    function _makeMultiAsset(assets : Asset[]) : MultiAsset{
-        let AssetsMap : any = {}
-        for(let asset of assets){
+    function _makeMultiAsset(assets) {
+        let AssetsMap = {}
+        for (let asset of assets) {
             let [policy, assetName] = asset.unit.split('.')
             let quantity = asset.quantity
-            if(!Array.isArray(AssetsMap[policy])){
+            if (!Array.isArray(AssetsMap[policy])) {
                 AssetsMap[policy] = []
             }
             AssetsMap[policy].push({
-                "unit": Buffer.from(assetName, 'ascii').toString('hex'), 
+                "unit": Buffer.from(assetName, 'ascii').toString('hex'),
                 "quantity": quantity
             })
-            
+
         }
         let multiAsset = CSL.MultiAsset.new()
-        for(const policy in AssetsMap){
+        for (const policy in AssetsMap) {
 
             const ScriptHash = CSL.ScriptHash.from_bytes(
-                Buffer.from(policy,'hex')
+                Buffer.from(policy, 'hex')
             )
             const Assets = CSL.Assets.new()
-            
+
             const _assets = AssetsMap[policy]
 
-            for(const asset of _assets){
-                const AssetName = CSL.AssetName.new(Buffer.from(asset.unit,'hex'))
+            for (const asset of _assets) {
+                const AssetName = CSL.AssetName.new(Buffer.from(asset.unit, 'hex'))
                 const BigNum = CSL.BigNum.from_str(asset.quantity)
-                
-                Assets.insert(AssetName, BigNum)  
+
+                Assets.insert(AssetName, BigNum)
             }
             multiAsset.insert(ScriptHash, Assets)
         }
         return multiAsset
     }
 
-    function _utxoToAssets(utxo: TransactionUnspentOutput) : Asset[]{
-        let value : any = utxo.output().amount()
+    function _utxoToAssets(utxo) {
+        let value = utxo.output().amount()
         const assets = [];
         assets.push({ unit: 'lovelace', quantity: value.coin().to_str() });
         if (value.multiasset()) {
             const multiAssets = value.multiasset().keys();
             for (let j = 0; j < multiAssets.len(); j++) {
-            const policy = multiAssets.get(j);
-            const policyAssets = value.multiasset().get(policy);
-            const assetNames = policyAssets.keys();
-            for (let k = 0; k < assetNames.len(); k++) {
-                const policyAsset = assetNames.get(k);
-                const quantity = policyAssets.get(policyAsset);
-                const asset =
-                    Buffer.from(
-                        policy.to_bytes()
-                    ).toString('hex') + "." +
-                    Buffer.from(
-                        policyAsset.name()
-                    ).toString('ascii')
+                const policy = multiAssets.get(j);
+                const policyAssets = value.multiasset().get(policy);
+                const assetNames = policyAssets.keys();
+                for (let k = 0; k < assetNames.len(); k++) {
+                    const policyAsset = assetNames.get(k);
+                    const quantity = policyAssets.get(policyAsset);
+                    const asset =
+                        Buffer.from(
+                            policy.to_bytes()
+                        ).toString('hex') + "." +
+                        Buffer.from(
+                            policyAsset.name()
+                        ).toString('ascii')
 
 
-                assets.push({
-                    unit: asset,
-                    quantity: quantity.to_str(),
-                });
-            }
+                    assets.push({
+                        unit: asset,
+                        quantity: quantity.to_str(),
+                    });
+                }
             }
         }
         return assets;
     }
 
-    function _txBuilder({PaymentAddress, Utxos, Outputs, ProtocolParameter, Metadata = null, MetadataLabel = '721', Delegation = null} : {
-        PaymentAddress : string
-        Utxos : any,
-        Outputs : TransactionOutputs,
-        ProtocolParameter : any,
-        Metadata? : any,
-        MetadataLabel?: string,
-        Delegation? : {
-            stakeKeyHash: string,
-            poolHex: string,
-            delegation: {
-                active: boolean,
-                rewards: string,
-                poolId: string
-            }
-        } | null
-    }) : Uint8Array {
+    function _txBuilder({ PaymentAddress, Utxos, Outputs, ProtocolParameter, Metadata = null, MetadataLabel = '721', Delegation = null }) {
         const MULTIASSET_SIZE = 5000;
         const VALUE_SIZE = 5000;
         const totalAssets = 0
@@ -526,15 +448,15 @@ export default async function CardanoWalletsApi(WalletObject: any, blockfrostApi
         for (let i = 0; i < inputs.length; i++) {
             const utxo = inputs[i];
             txBuilder.add_input(
-              utxo.output().address(),
-              utxo.input(),
-              utxo.output().amount()
+                utxo.output().address(),
+                utxo.input(),
+                utxo.output().amount()
             );
         }
 
-        if(Delegation){
+        if (Delegation) {
             let certificates = CSL.Certificates.new();
-            if (!Delegation.delegation.active){
+            if (!Delegation.delegation.active) {
                 certificates.add(
                     CSL.Certificate.new_stake_registration(
                         CSL.StakeRegistration.new(
@@ -547,20 +469,20 @@ export default async function CardanoWalletsApi(WalletObject: any, blockfrostApi
                     )
                 )
             }
-            
+
             let poolKeyHash = Delegation.poolHex
             certificates.add(
                 CSL.Certificate.new_stake_delegation(
-                  CSL.StakeDelegation.new(
-                    CSL.StakeCredential.from_keyhash(
-                      CSL.Ed25519KeyHash.from_bytes(
-                        Buffer.from(Delegation.stakeKeyHash, 'hex')
-                      )
-                    ),
-                    CSL.Ed25519KeyHash.from_bytes(
-                      Buffer.from(poolKeyHash, 'hex')
+                    CSL.StakeDelegation.new(
+                        CSL.StakeCredential.from_keyhash(
+                            CSL.Ed25519KeyHash.from_bytes(
+                                Buffer.from(Delegation.stakeKeyHash, 'hex')
+                            )
+                        ),
+                        CSL.Ed25519KeyHash.from_bytes(
+                            Buffer.from(poolKeyHash, 'hex')
+                        )
                     )
-                  )
                 )
             );
             txBuilder.set_certs(certificates)
@@ -568,7 +490,7 @@ export default async function CardanoWalletsApi(WalletObject: any, blockfrostApi
 
 
         let AUXILIARY_DATA
-        if(Metadata){
+        if (Metadata) {
             let METADATA = CSL.GeneralTransactionMetadata.new()
             METADATA.insert(
                 CSL.BigNum.from_str(MetadataLabel),
@@ -582,11 +504,11 @@ export default async function CardanoWalletsApi(WalletObject: any, blockfrostApi
             //const auxiliaryDataHash = CSL.hash_auxiliary_data(AUXILIARY_DATA)
             txBuilder.set_auxiliary_data(AUXILIARY_DATA)
         }
-        
-        for(let i=0; i<Outputs.len(); i++){
+
+        for (let i = 0; i < Outputs.len(); i++) {
             txBuilder.add_output(Outputs.get(i))
         }
-        
+
 
         const change = selection.change;
         const changeMultiAssets = change.multiasset();
@@ -595,14 +517,14 @@ export default async function CardanoWalletsApi(WalletObject: any, blockfrostApi
             const partialChange = CSL.Value.new(
                 CSL.BigNum.from_str('0')
             );
-        
+
             const partialMultiAssets = CSL.MultiAsset.new();
             const policies = changeMultiAssets.keys();
             const makeSplit = () => {
                 for (let j = 0; j < changeMultiAssets.len(); j++) {
                     const policy = policies.get(j);
                     const policyAssets = changeMultiAssets.get(policy);
-                    if(policyAssets){
+                    if (policyAssets) {
                         const assetNames = policyAssets.keys();
                         const assets = CSL.Assets.new();
                         for (let k = 0; k < assetNames.len(); k++) {
@@ -611,7 +533,7 @@ export default async function CardanoWalletsApi(WalletObject: any, blockfrostApi
                             assets.insert(policyAsset, quantity);
                             //check size
                             const checkMultiAssets = CSL.MultiAsset.from_bytes(
-                            partialMultiAssets.to_bytes());
+                                partialMultiAssets.to_bytes());
                             checkMultiAssets.insert(policy, assets);
                             const checkValue = CSL.Value.new(CSL.BigNum.from_str('0'));
                             checkValue.set_multiasset(checkMultiAssets);
@@ -621,9 +543,9 @@ export default async function CardanoWalletsApi(WalletObject: any, blockfrostApi
                             }
                         }
                         partialMultiAssets.insert(policy, assets);
-                    }                  
+                    }
                 }
-              };
+            };
 
             makeSplit();
             partialChange.set_multiasset(partialMultiAssets);
@@ -636,8 +558,8 @@ export default async function CardanoWalletsApi(WalletObject: any, blockfrostApi
 
             txBuilder.add_output(
                 CSL.TransactionOutput.new(
-                CSL.Address.from_bech32(PaymentAddress),
-                partialChange
+                    CSL.Address.from_bech32(PaymentAddress),
+                    partialChange
                 )
             );
         }
@@ -656,7 +578,7 @@ export default async function CardanoWalletsApi(WalletObject: any, blockfrostApi
         return transaction.to_bytes()
     }
 
-    async function _signSubmitTx(transactionRaw : Uint8Array) : Promise<string>{
+    async function _signSubmitTx(transactionRaw) {
         let transaction = CSL.Transaction.from_bytes(transactionRaw)
         const witneses = await Wallet.signTx(
             Buffer.from(
@@ -665,7 +587,7 @@ export default async function CardanoWalletsApi(WalletObject: any, blockfrostApi
         )
 
         const signedTx = CSL.Transaction.new(
-            transaction.body(), 
+            transaction.body(),
             CSL.TransactionWitnessSet.from_bytes(
                 Buffer.from(
                     witneses,
@@ -684,40 +606,40 @@ export default async function CardanoWalletsApi(WalletObject: any, blockfrostApi
 
     }
     async function _getProtocolParameter() {
-        
+
 
         let latestBlock = await _blockfrostRequest("/blocks/latest")
-        if(!latestBlock) throw ERROR.FAILED_PROTOCOL_PARAMETER
+        if (!latestBlock) throw ERROR.FAILED_PROTOCOL_PARAMETER
 
         let p = await _blockfrostRequest(`/epochs/${latestBlock.epoch}/parameters`) //
-        if(!p) throw ERROR.FAILED_PROTOCOL_PARAMETER
+        if (!p) throw ERROR.FAILED_PROTOCOL_PARAMETER
 
         return {
             linearFee: {
-              minFeeA: p.min_fee_a.toString(),
-              minFeeB: p.min_fee_b.toString(),
+                minFeeA: p.min_fee_a.toString(),
+                minFeeB: p.min_fee_b.toString(),
             },
             minUtxo: '1000000', //p.min_utxo, minUTxOValue protocol paramter has been removed since Alonzo HF. Calulation of minADA works differently now, but 1 minADA still sufficient for now
             poolDeposit: p.pool_deposit,
             keyDeposit: p.key_deposit,
-            maxTxSize: p.max_tx_size, 
+            maxTxSize: p.max_tx_size,
             slot: latestBlock.slot,
-          };
-          
+        };
+
     }
-    async function _blockfrostRequest(endpoint : string) : Promise<any>{
+    async function _blockfrostRequest(endpoint) {
         let networkId = await (await getNetworkId()).id
-        let networkEndpoint = networkId == 0 ? 
-            'https://cardano-testnet.blockfrost.io/api/v0' 
-            : 
+        let networkEndpoint = networkId == 0 ?
+            'https://cardano-testnet.blockfrost.io/api/v0'
+            :
             'https://cardano-mainnet.blockfrost.io/api/v0'
         try {
-            return await (await fetch(`${networkEndpoint}${endpoint}`,{
+            return await (await fetch(`${networkEndpoint}${endpoint}`, {
                 headers: {
                     project_id: blockfrostApiKey
                 }
             })).json()
-          } catch (error) {
+        } catch (error) {
             return null
         }
     }
@@ -737,6 +659,7 @@ export default async function CardanoWalletsApi(WalletObject: any, blockfrostApi
         sendMultiple,
         delegate,
         getBalanceADA,
+        experimental,
         auxiliary: {
             Buffer: Buffer,
             AsciiToBuffer: AsciiToBuffer,

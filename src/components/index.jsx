@@ -1,32 +1,28 @@
 import React from 'react';
-import { NamiWalletApi } from 'nami-wallet-api'
 import * as WASM_lib from '@emurgo/cardano-serialization-lib-browser'
 import { variables } from '../variables';
+import CardanoWalletsApi, { findWallet } from '../utils/cardano-wallets-api';
 
 
 const App = () => {
 
-    const handleClick = async () => {
+    const POOL_ID = 'pool1adur9jcn0dkjpm3v8ayf94yn3fe5xfk2rqfz7rfpuh6cw6evd7w'
 
-        const nami = await NamiWalletApi(
-            window.cardano, //nami wallet object
+    const handleCustomAPI = async () => {
+        const wallet_obj = window.cardano
+        const compatible = await findWallet('nami', wallet_obj)
+        const wallet = await CardanoWalletsApi(
+            compatible,
             variables.blockfrost_testnet,
-            WASM_lib
-        )
-        console.log("nami")
-        console.dir(nami)
-        if (!nami.isEnabled) {
-            await nami.enable()
-        }
-        const assets = await nami.getAssets()
-
-        console.dir(assets)
+            WASM_lib)
+        const resp = await wallet.delegate({ poolId: POOL_ID, metadata: null, metadataLabel: '721' })
+        console.dir(resp)
     }
 
     return (
         <div>
             <h1>Traka Was Here!</h1>
-            <button type='button' onClick={handleClick}>Sync Wallet</button>
+            <button type='button' onClick={handleCustomAPI}>Custom API Wallet Delegation</button>
         </div>)
 }
 
