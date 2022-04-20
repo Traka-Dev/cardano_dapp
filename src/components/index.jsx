@@ -1,6 +1,6 @@
 import React from "react";
 import * as WASM_lib from "@emurgo/cardano-serialization-lib-browser";
-import { variables } from "../variables";
+import { variables } from "../vars";
 import CardanoWalletsApi, { findWallet } from "../utils/cardano-wallets-api";
 
 const App = () => {
