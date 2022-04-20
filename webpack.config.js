@@ -7,14 +7,13 @@ module.exports = {
     output: {
         path: path.resolve(__dirname, 'dist'),
         filename: 'bundle.js',
-        publicPath: '/',
+        publicPath: './',
     },
     resolve: {
         extensions: ['.js', '.jsx'],
     },
     module: {
-        rules: [
-            {
+        rules: [{
                 test: /\.(js|jsx)$/,
                 exclude: /node_modules/,
                 use: {
@@ -23,16 +22,13 @@ module.exports = {
             },
             {
                 test: /\.html$/,
-                use: [
-                    {
-                        loader: 'html-loader',
-                    },
-                ],
+                use: [{
+                    loader: 'html-loader',
+                }, ],
             },
             {
                 test: /\.css$/,
-                use: [
-                    {
+                use: [{
                         loader: MiniCssExtractPlugin.loader,
                     },
                     'css-loader',

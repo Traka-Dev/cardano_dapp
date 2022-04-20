@@ -11,23 +11,27 @@ const ERROR = {
 
 const WALLETS_COMPATIBLE = ['nami', 'ccvault', 'eternl']
 
-export const findWallet = async (walletName, WalletObject) => {
+export const findWallet = async(walletName, WalletObject) => {
     const found_wallet = WALLETS_COMPATIBLE.find(w => w == walletName && WalletObject.hasOwnProperty(walletName))
     if (!found_wallet || found_wallet === undefined || found_wallet === '' || found_wallet === null) {
         throw (ERROR.NO_COMATIBLE_WALLET)
     }
     const Wallet = WalletObject[walletName]
-    // Enable Wallet to get the obj
+        // Enable Wallet to get the obj
     return await Wallet.enable()
 }
 
 export default async function CardanoWalletsApi(WalletObject, blockfrostApiKey, serializationLib = null) {
 
-    const CSL = serializationLib || await import('@emurgo/cardano-serialization-lib-asmjs')
-    const Buffer = (await import('buffer')).Buffer
+    const CSL = serializationLib || await
+    import ('@emurgo/cardano-serialization-lib-asmjs')
+    const Buffer = (await
+        import ('buffer')).Buffer
     const Wallet = WalletObject
-    const fetch = (await import('node-fetch')).default || window.fetch
-    const CoinSelection = (await import('./coinSelection')).default
+    const fetch = (await
+        import ('node-fetch')).default || window.fetch
+    const CoinSelection = (await
+        import ('./coinSelection')).default
 
     async function isEnabled() {
         return await Wallet.isEnabled()
@@ -66,7 +70,7 @@ export default async function CardanoWalletsApi(WalletObject, blockfrostApiKey, 
                     'hex'
                 )
             )
-        )?.to_address().to_bech32()
+        ).to_address().to_bech32()
     }
 
     async function getRewardAddressHex() {
@@ -88,8 +92,7 @@ export default async function CardanoWalletsApi(WalletObject, blockfrostApiKey, 
                 u,
                 'hex'
             )
-        )
-        )
+        ))
         let UTXOS = []
         for (let utxo of Utxos) {
             let assets = _utxoToAssets(utxo)
@@ -110,7 +113,7 @@ export default async function CardanoWalletsApi(WalletObject, blockfrostApiKey, 
         let balance = 0
         let Utxos = await getUtxos()
         Utxos.forEach(e => {
-            balance += Number(e.amount.find(e => e.unit === 'lovelace')?.quantity) / 1000000
+            balance += Number(e.amount.find(e => e.unit === 'lovelace').quantity) / 1000000
         })
         return balance
     }
@@ -501,7 +504,7 @@ export default async function CardanoWalletsApi(WalletObject, blockfrostApiKey, 
             )
             AUXILIARY_DATA = CSL.AuxiliaryData.new()
             AUXILIARY_DATA.set_metadata(METADATA)
-            //const auxiliaryDataHash = CSL.hash_auxiliary_data(AUXILIARY_DATA)
+                //const auxiliaryDataHash = CSL.hash_auxiliary_data(AUXILIARY_DATA)
             txBuilder.set_auxiliary_data(AUXILIARY_DATA)
         }
 
@@ -630,8 +633,7 @@ export default async function CardanoWalletsApi(WalletObject, blockfrostApiKey, 
     async function _blockfrostRequest(endpoint) {
         let networkId = await (await getNetworkId()).id
         let networkEndpoint = networkId == 0 ?
-            'https://cardano-testnet.blockfrost.io/api/v0'
-            :
+            'https://cardano-testnet.blockfrost.io/api/v0' :
             'https://cardano-mainnet.blockfrost.io/api/v0'
         try {
             return await (await fetch(`${networkEndpoint}${endpoint}`, {
