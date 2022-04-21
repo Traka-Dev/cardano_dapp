@@ -37,10 +37,6 @@ export default async function CardanoWalletsApi(WalletObject, blockfrostApiKey, 
         return await Wallet.isEnabled()
     }
 
-    async function experimental() {
-        return await Wallet.experimental
-    }
-
     async function enable() {
         try {
             await Wallet.enable()
@@ -433,7 +429,6 @@ export default async function CardanoWalletsApi(WalletObject, blockfrostApiKey, 
             Utxos,
             Outputs,
             20 + totalAssets,
-            //ProtocolParameter.minUtxo.to_str()
         )
         const inputs = selection.input;
         const txBuilder = CSL.TransactionBuilder.new(
@@ -504,7 +499,6 @@ export default async function CardanoWalletsApi(WalletObject, blockfrostApiKey, 
             )
             AUXILIARY_DATA = CSL.AuxiliaryData.new()
             AUXILIARY_DATA.set_metadata(METADATA)
-                //const auxiliaryDataHash = CSL.hash_auxiliary_data(AUXILIARY_DATA)
             txBuilder.set_auxiliary_data(AUXILIARY_DATA)
         }
 
@@ -661,7 +655,6 @@ export default async function CardanoWalletsApi(WalletObject, blockfrostApiKey, 
         sendMultiple,
         delegate,
         getBalanceADA,
-        experimental,
         auxiliary: {
             Buffer: Buffer,
             AsciiToBuffer: AsciiToBuffer,
