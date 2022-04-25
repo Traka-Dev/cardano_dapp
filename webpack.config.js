@@ -7,7 +7,7 @@ module.exports = {
     output: {
         path: path.resolve(__dirname, 'dist'),
         filename: 'bundle.js',
-        publicPath: '/',
+        publicPath: '/testada/wp-content/plugins/sarga-wp-api/js/',
     },
     resolve: {
         extensions: ['.js', '.jsx'],
