@@ -33,13 +33,15 @@ export const DelegateButton = ({
             },
             error:  {
               render({data}){
-                console.log(data.info)
                 switch(data.info){
                   case "user declined to sign tx", "User declined to sign the transaction.":                    
                     return "Has cancelado la transacción"
                   case "The request was refused due to lack of access - e.g. wallet disconnects.":                    
-                    return "Se desconecto la cartera, vuelve a intentarlo"
+                    return "Se desconecto la cartera, vuelve a intentarlo"                    
                   default:
+                    if(data == "No compatible wallet found"){
+                      return `No se encontro la cartera ${walletName}`
+                    }                    
                     return data.info   
                 }                
               }
@@ -50,6 +52,7 @@ export const DelegateButton = ({
       } else {
         console.log("no wallet detected");
         // NO WALLET
+        toast.error(`No se encontro la cartera ${walletName}`)
       }
     } catch (error) {
       // ERROR
